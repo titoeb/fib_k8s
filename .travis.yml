@@ -15,8 +15,23 @@ before_install:
 script:
     - docker run titoeb/react-test npm test -- --coverage
 
-deploy:
-    provider: script
-    script: bash ./deploy.sh
-    on:
-    branch: master
+after_script:
+    - docker build -t titoeb/multi-client:latest -t titoeb/multi-client:${GIT_SHA} -f ./client/Dockerfile ./client
+    - docker build -t titoeb/multi-server:latest -t titoeb/multi-server:${GIT_SHA} -f ./server/Dockerfile ./server
+    - docker build -t titoeb/multi-worker:latest -t titoeb/multi-worker:${GIT_SHA} -f ./worker/Dockerfile ./worker
+    - docker push titoeb/multi-client:LATEST
+    - docker push titoeb/multi-server:LATEST
+    - docker push titoeb/multi-worker:LATEST
+    - docker push titoeb/multi-client:${GIT_SHA}
+    - docker push titoeb/multi-server:${GIT_SHA}
+    - docker push titoeb/multi-worker:${GIT_SHA}
+    - kubectl apply -f k8s
+    - kubectl set image deployments/client-deployment client=titoeb/multi-client:${GIT_SHA}
+    - kubectl set image deployments/server-deployment server=titoeb/multi-server:${GIT_SHA}
+    - kubectl set image deployments/worker-deployment worker=titoeb/multi-worker:${GIT_SHA}
+
+# deploy:
+#     provider: script
+#     script: bash ./deploy.sh
+#     on:
+#     branch: master
